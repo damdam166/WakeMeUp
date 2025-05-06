@@ -250,29 +250,97 @@ def alphabeta_chess(board: chess.Board, depth: int = 4,
 
         return ( score, list_moves )
 
-board_test_1: chess.Board = chess.Board()
-depth: int = 6
-
-start: int = time.time()
-(score_1, list_moves_1) = alphabeta_chess(board_test_1, depth=depth)
-end: int = time.time()
-time_cost: int = round(end - start, 3) # in seconds.
-
-list_moves_1.reverse()
-for move in list_moves_1:
-    board_test_1.push(chess.Move.from_uci(move))
-
-print(f'Testing alphabeta for *Chess*. \n \
-      Basic start with depth = {depth} gives, in {time_cost} seconds: \n \
-          score = {score_1} \n \
-          moves are: \n \
-{list_moves_1} \n \
-\n \
-      The current game position is: \n \
-{board_test_1.fen()} \n \
-\n \
-      Here is the current board: \n \
-{board_test_1.unicode()} \n \
-')
+#board_test_1: chess.Board = chess.Board()
+#depth: int = 6
+#
+#start: int = time.time()
+#(score_1, list_moves_1) = alphabeta_chess(board_test_1, depth=depth)
+#end: int = time.time()
+#time_cost: int = round(end - start, 3) # in seconds.
+#
+#list_moves_1.reverse()
+#for move in list_moves_1:
+    #board_test_1.push(chess.Move.from_uci(move))
+#
+#print(f'Testing alphabeta for *Chess*. \n \
+      #Basic start with depth = {depth} gives, in {time_cost} seconds: \n \
+          #score = {score_1} \n \
+          #moves are: \n \
+#{list_moves_1} \n \
+#\n \
+      #The current game position is: \n \
+#{board_test_1.fen()} \n \
+#\n \
+      #Here is the current board: \n \
+#{board_test_1.unicode()} \n \
+#')
 
 # ---------------------------------------------------------------------------
+# AlphaBeta version of *Chess*, with *iterative deepening*.
+# ---------------------------------------------------------------------------
+
+lastTimestamp: list[float] = []
+def outOfTime() -> bool:
+    """
+    :return: It measures timestamps. Returns `True` if time is over.
+    """
+    maxTime: float = 120 # Seconds.
+    time.sleep(1)
+    lastTimestamp.append(time.time())
+
+    if len(lastTimestamp) <= 1:
+        return ( lastTimestamp[0] - maxTime ) <= 0
+
+    currentTimeUsed: float = lastTimestamp[-2] - lastTimestamp[-1]
+    return ( maxTime - currentTimeUsed ) <= 0
+
+def iterative_deepening_chess(board: chess.Board, maxDepth: int = 4,
+                    wantMax: bool = True) -> str:
+    """
+    :param maxDepth: a POSITIVE integer. Otherwise it will never stops.
+                                It goes from 1 to *maxDepth* included.
+    :return: The *iterative deepening* version of alpha beta.
+                Just the move in his *uci* form.
+    """
+    bestMoveToReturn: str = None
+    currentPosition: chess.Board = board.copy()
+    depth: int = 1
+
+    while (depth <= maxDepth and not outOfTime()):
+        currentPosition: chess.Board = board.copy()
+
+        start: int = time.time()
+        (score, list_moves) = alphabeta_chess(currentPosition, depth=depth,
+                                                        wantMax=wantMax)
+        end: int = time.time()
+        time_cost: int = round(end - start, 3) # in seconds.
+
+        list_moves.reverse()
+        for move in list_moves:
+            currentPosition.push(chess.Move.from_uci(move))
+
+        print(f'Testing alphabeta for *Chess*. \n \
+                Depth = {depth} gives, in {time_cost} seconds: \n \
+                  score = {score} \n \
+                  moves are: \n \
+        {list_moves} \n \
+        \n \
+              The current game position is: \n \
+        {currentPosition.fen()} \n \
+        \n \
+              Here is the current board: \n \
+{currentPosition.unicode()} \n \
+        ')
+
+        # Iteration
+        bestMoveToReturn = list_moves[0]
+        depth += 1
+
+    return bestMoveToReturn
+
+board_test_1: chess.Board = chess.Board()
+maxDepth: int = 10
+iterative_deepening_chess(board_test_1, maxDepth=maxDepth, wantMax=True)
+
+# ---------------------------------------------------------------------------
+
