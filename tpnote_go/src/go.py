@@ -294,8 +294,7 @@ create_result_file(testing_set)
 # To save the current model.
 ##############################################################################
 
-# Use `h5py`.
-# TODO.
+torch.save(model, './model.pt')
 
 ##############################################################################
 # Display training curves.
