@@ -1,5 +1,5 @@
 ##############################################################################
-#                       TP Go - IA - S8 - I2G1 - ddelpy
+#                   TP Go - IA - S8 - I2G1 - ddelpy - allaguierce
 #                           -*- coding: utf-8 -*-
 #                             Stats script file.
 ##############################################################################
@@ -31,9 +31,7 @@ N: int = int(len_data / 3)
 # To find the number of right guesses.
 ##############################################################################
 
-yield_abs: float = 0.05
-
-def find_number_right_guesses(file_predictions: str) -> float:
+def find_number_right_guesses(file_predictions: str, yield_abs: float = 0.05) -> float:
     results: list = []
     with open(file_predictions, "r") as f:
         for line in f.readlines():
@@ -50,11 +48,13 @@ def find_number_right_guesses(file_predictions: str) -> float:
         return 0
     return round(sum(results) / len(results), 2)
 
-print(f'\nFor {N} training inputs over {len_data} inputs, \n \
-      the percentage of right guesses, with a yield of {yield_abs * 100}%, \n \
-      on the testing inputs is: \
-      {find_number_right_guesses("./my_predictions.txt")} \n \
-')
+yields: list = [ 0.05, 0.10, 0.20, 0.30, 0.40, 0.50 ]
+for y in yields:
+    print(f'\nFor {N} training inputs over {len_data} inputs, \n \
+          the percentage of right guesses, with a yield of {y * 100}%, \n \
+          on the testing inputs is: \
+          {find_number_right_guesses("./my_predictions.txt", y)} \n \
+    ')
 
 ##############################################################################
 # EOF
