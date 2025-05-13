@@ -1,6 +1,5 @@
 from llmQuery import *
 
-
 questions = [
   {
     "question": "Jean a 24 billes. Il les partage également entre 4 amis. Combien chaque ami reçoit-il de billes ?",
@@ -129,3 +128,8 @@ for i in range(len(sorties)):
   print(f"Niveau : {questions[i]['niveau']}")
   print("-"*20)
 print()
+
+while(True):
+    answer = input('\n')
+    client.stream_direct(build_prompt(answer))
+
