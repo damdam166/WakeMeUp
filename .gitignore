@@ -176,3 +176,4 @@ cython_debug/
 # Me
 *env*
 *tags*
+*llmQuery*
