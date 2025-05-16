@@ -193,7 +193,7 @@ optimizer = Adam(model.parameters(), lr=0.001)
 # Data conversion, to be given to the model.
 ##############################################################################
 
-N = int(len(data) / 3) # The training set is `data[:N]`.
+N = 2 * int(len(data) / 3) # The training set is `data[:N]`.
 training_set: list = data[:N]
 
 # Construct the training dataset.
@@ -260,8 +260,36 @@ def position_predict(black_stones: list, white_stones: list) -> float:
     return float(prediction[0][0])
 
 ##############################################################################
+# Get the evaluation set.
+##############################################################################
+
+# Retrieve *eval data*.
+def get_eval_set_go() -> list:
+    ''' Returns the set of samples from the local file
+    or download it if it does not exists
+    '''
+    raw_samples_file: str = "positions-to-evaluate-8x8-2025.json.gz"
+
+    if not os.path.isfile(raw_samples_file):
+        print("File",
+              raw_samples_file,
+              "not found, I am downloading it...",
+              end="")
+
+        urllib.request.urlretrieve(
+    "https://www.labri.fr/perso/lsimon/static/inge2-ia/positions-to-evaluate-8x8-2025.json.gz",
+            "positions-to-evaluate-8x8-2025.json.gz")
+        print(" Done")
+
+    with gzip.open("positions-to-evaluate-8x8-2025.json.gz") as fz:
+        data = json.loads(fz.read().decode("utf-8"))
+    return data
+
+##############################################################################
 # Generate the output file.
 ##############################################################################
+
+evaluation_set: list = get_eval_set_go()
 
 def create_result_file(newdata: list) -> None:
     """
@@ -270,25 +298,17 @@ def create_result_file(newdata: list) -> None:
     if newdata == []:
         return
 
-    # Magic trick to add the true result when `newdata` contains the scores.
-    if 'black_wins' in newdata[0]:
-        resultat  = [
-f'found: {position_predict(d["black_stones"], d["white_stones"])}; ' \
-f'result: {d["black_wins"] / d["rollouts"]}' \
-            for d in newdata
-        ]
-    else:
-        resultat  = [
-            position_predict(d["black_stones"], d["white_stones"])
-            for d in newdata
-        ]
+    resultat  = [
+        position_predict(d["black_stones"], d["white_stones"])
+        for d in newdata
+    ]
 
     with open("./my_predictions.txt", "w") as f:
          for p in resultat:
             f.write(str(p)+"\n")
 
 # Save the results for the testing set.
-create_result_file(testing_set)
+create_result_file(evaluation_set)
 
 ##############################################################################
 # To save the current model.
