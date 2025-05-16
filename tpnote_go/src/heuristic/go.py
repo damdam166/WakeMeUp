@@ -234,13 +234,17 @@ def train(model, device, trainloader,  optimizer, epoch, loss_f):
 
     return {"loss": total_loss}
 
+
+train_losses = []
+
 trainloader = torch.utils.data.DataLoader(dataset_train,
                                           batch_size=batch_size,
                                           shuffle=True)
 
 for epoch in range(1, epochs):
-  train_stats = train(model, device, trainloader, optimizer, epoch, criterion)
-  print(train_stats)
+    train_stats = train(model, device, trainloader, optimizer, epoch, criterion)
+    train_losses.append(train_stats['loss'])
+    print(train_stats)
 
 ##############################################################################
 # To do predictions.
@@ -286,6 +290,35 @@ def get_eval_set_go() -> list:
     return data
 
 ##############################################################################
+
+def create_result_file_tst(newdata: list) -> None:
+    """
+    :param newdata: should be a part of `data`.
+    """
+    if newdata == []:
+        return
+
+    # Magic trick to add the true result when `newdata` contains the scores.
+    if 'black_wins' in newdata[0]:
+        resultat  = [
+f'found: {position_predict(d["black_stones"], d["white_stones"])}; ' \
+f'result: {d["black_wins"] / d["rollouts"]}' \
+            for d in newdata
+        ]
+    else:
+        resultat  = [
+            position_predict(d["black_stones"], d["white_stones"])
+            for d in newdata
+        ]
+
+    with open("./my_predictions.txt", "w") as f:
+         for p in resultat:
+            f.write(str(p)+"\n")
+
+# Save the results for the testing set.
+create_result_file_tst(testing_set)
+
+##############################################################################
 # Generate the output file.
 ##############################################################################
 
@@ -303,7 +336,7 @@ def create_result_file(newdata: list) -> None:
         for d in newdata
     ]
 
-    with open("./my_predictions.txt", "w") as f:
+    with open("./eval_predictions.txt", "w") as f:
          for p in resultat:
             f.write(str(p)+"\n")
 
@@ -320,7 +353,16 @@ torch.save(model, './model.pt')
 # Display training curves.
 ##############################################################################
 
-# TODO.
+plt.figure(figsize=(8,5))
+plt.plot(range(1, epochs), train_losses, marker='o', label='Training Loss')
+plt.title("Loss curve during training")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.savefig("training_loss.png")
+plt.close()
 
 ##############################################################################
 # EOF
