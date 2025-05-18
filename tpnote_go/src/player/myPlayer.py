@@ -39,8 +39,9 @@ class myPlayer(PlayerInterface):
     def __init__(self):
         self._board = Goban.Board()
         self._mycolor = None
+        self.time_left = 29 * 60
         self.model = GoNet()
-        self.model.load_state_dict(torch.load("../heuristic/model.pt", weights_only=False))
+        self.model.load_state_dict(torch.load("./model.pt", weights_only=False))
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
         elif torch.backends.mps.is_available():
@@ -99,7 +100,7 @@ class myPlayer(PlayerInterface):
         if is_white:
             result = 1 - result
         return (result - 0.5) * 2
-        
+
     def _predict_board(self, board: Goban.Board, is_white: bool):
         pieces = [(x,y,board._board[board.flatten((x,y))]) for x in range(board._BOARDSIZE)
                   for y in range(board._BOARDSIZE) if board._board[board.flatten((x,y))] != board._EMPTY]
@@ -108,6 +109,21 @@ class myPlayer(PlayerInterface):
             [(x, y) for (x, y, c) in pieces if c != 1],
             is_white
         )
+
+    def _sorted_moves(self, board: Goban.Board, is_white: bool, top_m: int = 10):
+        """
+        :param top_m: this thing is for Monte Carlo, just consider the *top_m*
+                                                            best moves.
+        """
+        move_scores = []
+        for move in board.legal_moves():
+            board.push(move)
+            score: float = -self._predict_board(board, is_white)
+            board.pop()
+            move_scores.append((score, move))
+
+        move_scores.sort(reverse=True, key=lambda x: x[0])
+        return [ move for (_, move) in move_scores[:top_m] ]
 
     def _alpha_beta(self, board, depth, alpha, beta, is_white):
         if depth == 0 or board.is_game_over():
@@ -129,26 +145,61 @@ class myPlayer(PlayerInterface):
         return "Wake Me Up"
 
     def getPlayerMove(self):
+        start_time = time.time()
+
+        nb_moves = len(self._board._historyMoveNames)
+        number_moves_left = 64 - nb_moves
+        epsilon: int = 5
+        cool_time: int = min(15, self.time_left / max(1, number_moves_left) - epsilon)
+
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
-        moves = self._board.legal_moves()
+
         best_move = None
-        best_value = float('-inf')
+        depth: int = 1 # Iterative deepening, this will increase.
+
+        # Not to do some crazy stuff at the opening.
+        top_m = 10 if nb_moves < 10 else 5
+
+        # Kinda of *Monte Carlo* stuff right here.
+        # Just consider the *Candidate* moves like in chess you know.
+        moves = self._sorted_moves(self._board, self._mycolor != 1, top_m=top_m)
+
         alpha = float('-inf')
         beta = float('inf')
-        depth = 4  # You can adjust the search depth
 
-        # Alpha-beta search for the best move
-        for move in moves:
-            self._board.push(move)
-            value = -self._alpha_beta(self._board, depth - 1, -beta, -alpha, self._mycolor != 1)
-            self._board.pop()
-            if value > best_value:
-                best_value = value
-                best_move = move
-            alpha = max(alpha, value)
+        try:
+            while True:
+                current_best_move = None
+                current_best_value = float('-inf')
 
+                # Alpha-beta search for the best move
+                for move in moves:
+                    self._board.push(move)
+                    value = -self._alpha_beta(self._board, depth - 1, -beta, -alpha, self._mycolor != 1)
+                    self._board.pop()
+                    if value > current_best_value:
+                        current_best_value = value
+                        current_best_move = move
+                    alpha = max(alpha, value)
+
+                best_move = current_best_move
+                depth += 1
+
+                if time.time() - start_time > cool_time or depth >= 6:
+                    raise TimeoutError
+
+            if time.time() - start_time > cool_time or depth >= 6:
+                raise TimeoutError
+
+            best_move = current_best_move
+            depth += 1 # Iterative Deepening, you know.
+
+        except:
+            print(f'Iterative Deepening stopped at depth={depth}.')
+
+        self.time_left -= time.time() - start_time
         self._board.push(best_move)
         print("I am playing ", self._board.move_to_str(best_move))
         print("My current board :")
