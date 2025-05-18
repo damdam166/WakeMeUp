@@ -187,10 +187,10 @@ class myPlayer(PlayerInterface):
                 best_move = current_best_move
                 depth += 1
 
-                if time.time() - start_time > cool_time or depth == 5:
+                if time.time() - start_time > cool_time or depth >= 6:
                     raise TimeoutError
 
-            if time.time() - start_time > cool_time or depth == 5:
+            if time.time() - start_time > cool_time or depth >= 6:
                 raise TimeoutError
 
             best_move = current_best_move
