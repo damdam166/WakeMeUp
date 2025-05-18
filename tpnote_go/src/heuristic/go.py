@@ -299,17 +299,10 @@ def create_result_file_tst(newdata: list) -> None:
         return
 
     # Magic trick to add the true result when `newdata` contains the scores.
-    if 'black_wins' in newdata[0]:
-        resultat  = [
-f'found: {position_predict(d["black_stones"], d["white_stones"])}; ' \
-f'result: {d["black_wins"] / d["rollouts"]}' \
-            for d in newdata
-        ]
-    else:
-        resultat  = [
-            position_predict(d["black_stones"], d["white_stones"])
-            for d in newdata
-        ]
+    resultat  = [
+      position_predict(d["black_stones"], d["white_stones"])
+      for d in newdata
+    ]
 
     with open("./my_predictions.txt", "w") as f:
          for p in resultat:
@@ -347,7 +340,7 @@ create_result_file(evaluation_set)
 # To save the current model.
 ##############################################################################
 
-torch.save(model, './model.pt')
+torch.save(model.state_dict(), './model.pt')
 
 ##############################################################################
 # Display training curves.
