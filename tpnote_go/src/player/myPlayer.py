@@ -40,19 +40,13 @@ class myPlayer(PlayerInterface):
         self._board = Goban.Board()
         self._mycolor = None
         self.model = GoNet()
-        self.model.load_state_dict(torch.load("../heuristic/model.pt", weights_only=True))
+        self.model.load_state_dict(torch.load("../heuristic/model.pt", weights_only=False))
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
         elif torch.backends.mps.is_available():
             self.device = torch.device('mps')
         else:
             self.device = torch.device('cpu')
-
-    def _arrayed(self, stones: list) -> np.ndarray:
-        """ A function to apply `name_to_coord` on numpy arrays.
-        :return: a numpy array such as shape=(len(stones), 2).
-        """
-        return np.array(list(map(Goban.Board.name_to_coord, stones)))
 
     def _split_channels(self, matrix: np.ndarray) -> np.ndarray:
         """ Pytorch wants this.
@@ -78,13 +72,13 @@ class myPlayer(PlayerInterface):
 
         # Black stones
         if black_stones != []:
-            black_coords: np.ndarray = self._arrayed(black_stones)
+            black_coords: np.ndarray = np.array(black_stones)
             # line is black_coords[:, 1], column is black_coords[:, 0].
             matrix[black_coords[:, 1], black_coords[:, 0]] = 1
 
         # White stones
         if white_stones != []:
-            white_coords: np.ndarray = self._arrayed(white_stones)
+            white_coords: np.ndarray = np.array(white_stones)
             matrix[white_coords[:, 1], white_coords[:, 0]] = 2
 
         # Torch is waiting for something with the shape=[batch_size, 2, 8, 8].
@@ -101,7 +95,7 @@ class myPlayer(PlayerInterface):
         Xpos = Xpos.to(self.device)
 
         prediction = self.model(Xpos)
-        return float(prediction[0][0])
+        return (float(prediction[0][0]) - 0.5) * 2
         
     def _predict_board(self, board: Goban.Board):
         pieces = [(x,y,board._board[board.flatten((x,y))]) for x in range(board._BOARDSIZE)
@@ -139,7 +133,7 @@ class myPlayer(PlayerInterface):
         best_value = float('-inf')
         alpha = float('-inf')
         beta = float('inf')
-        depth = 3  # You can adjust the search depth
+        depth = 4  # You can adjust the search depth
 
         # Alpha-beta search for the best move
         for move in moves:
