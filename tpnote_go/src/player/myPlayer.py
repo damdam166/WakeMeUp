@@ -84,7 +84,7 @@ class myPlayer(PlayerInterface):
         # Torch is waiting for something with the shape=[batch_size, 2, 8, 8].
         return self._split_channels(matrix)
 
-    def _position_predict(self, black_stones: list, white_stones: list) -> float:
+    def _position_predict(self, black_stones: list, white_stones: list, is_white: bool) -> float:
         Xpos_np: np.ndarray = self._transform_position(black_stones, white_stones)
         Xpos: torch.tensor = torch.from_numpy(Xpos_np).float()
 
@@ -95,23 +95,27 @@ class myPlayer(PlayerInterface):
         Xpos = Xpos.to(self.device)
 
         prediction = self.model(Xpos)
-        return (float(prediction[0][0]) - 0.5) * 2
+        result = float(prediction[0][0])
+        if is_white:
+            result = 1 - result
+        return (result - 0.5) * 2
         
-    def _predict_board(self, board: Goban.Board):
+    def _predict_board(self, board: Goban.Board, is_white: bool):
         pieces = [(x,y,board._board[board.flatten((x,y))]) for x in range(board._BOARDSIZE)
                   for y in range(board._BOARDSIZE) if board._board[board.flatten((x,y))] != board._EMPTY]
         return self._position_predict(
             [(x, y) for (x, y, c) in pieces if c == 1],
-            [(x, y) for (x, y, c) in pieces if c != 1]
+            [(x, y) for (x, y, c) in pieces if c != 1],
+            is_white
         )
 
-    def _alpha_beta(self, board, depth, alpha, beta):
+    def _alpha_beta(self, board, depth, alpha, beta, is_white):
         if depth == 0 or board.is_game_over():
-            return self._predict_board(board)
+            return self._predict_board(board, is_white)
         max_eval = float('-inf')
         for move in board.legal_moves():
             board.push(move)
-            eval_board = -self._alpha_beta(board, depth - 1, -beta, -alpha)
+            eval_board = -self._alpha_beta(board, depth - 1, -beta, -alpha, is_white)
             board.pop()
             if eval_board > max_eval:
                 max_eval = eval_board
@@ -138,7 +142,7 @@ class myPlayer(PlayerInterface):
         # Alpha-beta search for the best move
         for move in moves:
             self._board.push(move)
-            value = -self._alpha_beta(self._board, depth - 1, -beta, -alpha)
+            value = -self._alpha_beta(self._board, depth - 1, -beta, -alpha, self._mycolor != 1)
             self._board.pop()
             if value > best_value:
                 best_value = value
